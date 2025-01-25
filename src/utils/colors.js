@@ -1,0 +1,1 @@
+export const CANVAS_BG = '#0A0A0A'
