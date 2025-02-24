@@ -1,156 +1,153 @@
-"use client";
-import { CANVAS_BG } from "@/utils/colors";
-import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+'use client'
+import { CANVAS_BG } from '@/utils/colors'
+import { useCallback, useEffect, useState } from 'react'
+import { useSocket } from '../hooks/useSocket'
+import { useCanvas } from '../hooks/useCanvas'
+import { useSocketDrawing } from '../hooks/useSocketDrawing'
+import Buttons from './components/Buttons'
 
 export default function CanvasDrawing() {
-  const canvasRef = useRef(null);
-  const isDrawingRef = useRef(false);
-  const contextRef = useRef(null);
-  const [color, setColor] = useState("#ffffff");
+	const [localColor, setLocalColor] = useState('#ffffff')
+	const { emit, on, off, socketId } = useSocket()
+	const [userPaths, setUserPaths] = useState(new Map())
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+	const {
+		canvasRef,
+		mouseCanvasRef,
+		isDrawingRef,
+		contextRef,
+		initializeCanvas,
+		changeLineWidth,
+		mouseCanvasContextRef,
+	} = useCanvas(localColor)
 
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+	useSocketDrawing({
+		contextRef,
+		mouseCanvasContextRef,
+		userPaths,
+		setUserPaths,
+		emit,
+		on,
+		off,
+		socketId,
+		mouseCanvasRef,
+	})
 
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    context.fillStyle = CANVAS_BG;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.lineWidth = 2;
-    context.lineCap = "round";
+	useEffect(() => {
+		initializeCanvas()
+	}, [initializeCanvas])
 
-    contextRef.current = context;
-  }, []);
+	useEffect(() => {
+		changeLineWidth(localColor)
+	}, [localColor, changeLineWidth])
 
-  const changeLineWidth = useCallback(() => {
-    const context = contextRef.current;
-    if (context) {
-      if (color === CANVAS_BG) context.lineWidth = 25;
-      else context.lineWidth = 3;
-    }
-  }, [color]);
+	const startDrawing = e => {
+		const canvas = canvasRef.current
+		const context = contextRef.current
 
-  useEffect(() => {
-    changeLineWidth();
-  }, [color]);
+		if (!canvas || !context) return
 
-  const startDrawing = (e) => {
-    const canvas = canvasRef.current;
-    const context = contextRef.current;
+		const rect = canvas.getBoundingClientRect()
+		const x = e.clientX - rect.left
+		const y = e.clientY - rect.top
 
-    if (!canvas || !context) return;
+		context.strokeStyle = localColor
+		context.beginPath()
+		context.moveTo(x, y)
+		emit('draw', {
+			x,
+			y,
+			isNewLine: true,
+			userId: socketId,
+			color: localColor,
+		})
+		isDrawingRef.current = true
+	}
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+	const trackMouseMove = e => {
+		const canvas = mouseCanvasRef.current
+		const rect = canvas.getBoundingClientRect()
+		const x = e.clientX - rect.left
+		const y = e.clientY - rect.top
+		emit('mouse-move', { x, y, socketId })
+	}
 
-    context.strokeStyle = color;
-    context.beginPath();
-    context.moveTo(x, y);
-    isDrawingRef.current = true;
-  };
+	const draw = e => {
+		trackMouseMove(e)
+		if (!isDrawingRef.current) return
 
-  const draw = (e) => {
-    if (!isDrawingRef.current) return;
+		const canvas = canvasRef.current
+		const context = contextRef.current
+		if (!canvas || !context) return
 
-    const canvas = canvasRef.current;
-    const context = contextRef.current;
-    if (!canvas || !context) return;
+		const rect = canvas.getBoundingClientRect()
+		const x = e.clientX - rect.left
+		const y = e.clientY - rect.top
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+		context.lineTo(x, y)
+		context.stroke()
+		emit('draw', {
+			x,
+			y,
+			isNewLine: false,
+			userId: socketId,
+			color: localColor,
+		})
+	}
 
-    context.lineTo(x, y);
-    context.stroke();
-  };
+	const stopDrawing = () => {
+		isDrawingRef.current = false
+	}
 
-  const stopDrawing = () => {
-    const context = contextRef.current;
-    if (!context) return;
+	const clearCanvas = () => {
+		const canvas = canvasRef.current
+		const context = contextRef.current
+		if (context) {
+			context.fillStyle = CANVAS_BG
+			context.fillRect(0, 0, canvas.width, canvas.height)
+		}
+		emit('clear-canvas')
+	}
 
-    context.closePath();
-    isDrawingRef.current = false;
-  };
+	const handleMouseLeave = () => {
+		emit('mouse-leave', { socketId })
+	}
 
-  const handleResize = () => {
-    const canvas = canvasRef.current;
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    context.fillStyle = CANVAS_BG;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-  };
-
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    const context = contextRef.current;
-    if (context) {
-      context.fillStyle = CANVAS_BG;
-      context.fillRect(0, 0, canvas.width, canvas.height);
-    }
-  };
-
-  return (
-    <>
-      <div className="relative">
-        <div className="absolute bg-gray-800 p-2 rounded-full flex flex-col gap-2 left-8 top-8">
-          <button
-            onClick={() => setColor("#dc2626")}
-            data-color={color}
-            className="border border-gray-500 rounded-full w-10 h-10 bg-red-600 data-[color=#dc2626]:border-white shadow-white"
-          />
-          <button
-            onClick={() => setColor("#16a34a")}
-            data-color={color}
-            className="border border-gray-500 rounded-full w-10 h-10 bg-green-600 data-[color=#16a34a]:border-white"
-          />
-          <button
-            onClick={() => setColor("#2563eb")}
-            data-color={color}
-            className="border border-gray-500 rounded-full w-10 h-10 bg-blue-600 data-[color=#2563eb]:border-white"
-          />
-          <button
-            onClick={() => setColor("#ffffff")}
-            data-color={color}
-            className="border border-gray-500 rounded-full w-10 h-10 bg-white data-[color=#ffffff]:border-white"
-          />
-          <button
-            onClick={() => setColor(CANVAS_BG)}
-            data-color={color}
-            className={`border border-gray-500 rounded-full w-10 h-10 bg-[${CANVAS_BG}] data-[color=${CANVAS_BG}]:border-white`}
-          />
-          <button
-            onClick={() => clearCanvas()}
-            data-color={color}
-            className={`border border-gray-500 rounded-full w-10 h-10 bg-gray-500 flex items-center justify-center`}
-          >
-            <Image
-              src="/icons/trash.png"
-              className="w-6 h-6"
-              width={1000}
-              height={1000}
-            />
-          </button>
-        </div>
-      </div>
-      <canvas
-        ref={canvasRef}
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseOut={stopDrawing}
-        onResize={handleResize}
-        style={{
-          width: "100%",
-          height: "100%",
-          cursor: "crosshair",
-          border: "2px solid black",
-        }}
-      />
-    </>
-  );
+	return (
+		<>
+			<div className='absolute z-50'>
+				<Buttons
+					localColor={localColor}
+					setLocalColor={setLocalColor}
+					onClear={clearCanvas}
+				/>
+			</div>
+			<canvas
+				ref={canvasRef}
+				style={{
+					width: '100%',
+					height: '100%',
+					cursor: 'crosshair',
+					border: '2px solid black',
+					position: 'absolute',
+				}}
+			/>
+			<canvas
+				onMouseDown={startDrawing}
+				onMouseMove={draw}
+				onMouseUp={stopDrawing}
+				onMouseOut={stopDrawing}
+				onMouseLeave={handleMouseLeave}
+				ref={mouseCanvasRef}
+				style={{
+					width: '100%',
+					height: '100%',
+					position: 'absolute',
+					zIndex: 20,
+					cursor: 'crosshair',
+					border: '2px solid black',
+				}}
+			/>
+		</>
+	)
 }
