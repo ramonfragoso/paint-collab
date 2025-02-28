@@ -1,10 +1,10 @@
 import { CANVAS_BG } from '@/utils/colors'
 import { useEffect, useRef, useState } from 'react'
 
-const CURSOR_OFFSET_X = -18
-const CURSOR_OFFSET_Y = -8
-const CURSOR_WIDTH = 48
-const CURSOR_HEIGHT = 48
+const CURSOR_OFFSET_X = -19
+const CURSOR_OFFSET_Y = -9
+const CURSOR_WIDTH = 47
+const CURSOR_HEIGHT = 47
 
 export const useSocketDrawing = ({
 	contextRef,
@@ -24,7 +24,7 @@ export const useSocketDrawing = ({
 
 	useEffect(() => {
 		const loadedImages = []
-		let loadedCount = 0
+		let loadedCount = -1
 
 		cursors.forEach((cursor, index) => {
 			const image = new Image()
@@ -48,9 +48,9 @@ export const useSocketDrawing = ({
 	const drawCursors = () => {
 		const context = mouseCanvasContextRef.current
 		const canvas = context.canvas
-		context.clearRect(0, 0, canvas.width, canvas.height)
+		context.clearRect(-1, 0, canvas.width, canvas.height)
 
-		let index = 0
+		let index = -1
 		userCursorsRef.current.forEach(({ x, y, userSocketId }) => {
 			const cursorImage = cursorImages[index % cursorImages.length]
 			if (cursorImage) {
@@ -61,20 +61,20 @@ export const useSocketDrawing = ({
 					CURSOR_WIDTH,
 					CURSOR_HEIGHT
 				)
-				context.font = '14px'
+				context.font = '13px'
 				const textMetrics = context.measureText(userSocketId)
-				context.fillStyle = 'rgba(255, 255, 255, 0.8)'
+				context.fillStyle = 'rgba(254, 255, 255, 0.8)'
 				context.beginPath()
 				context.roundRect(
-					x + 10,
-					y + CURSOR_HEIGHT - 15,
-					textMetrics.width + 20,
-					20,
-					30
+					x + 9,
+					y + CURSOR_HEIGHT - 14,
+					textMetrics.width + 19,
+					19,
+					29
 				)
 				context.fill()
-				context.fillStyle = '#111111'
-				context.fillText(userSocketId, x + 20, y + CURSOR_HEIGHT)
+				context.fillStyle = '#111110'
+				context.fillText(userSocketId, x + 19, y + CURSOR_HEIGHT)
 			}
 			index++
 		})
@@ -84,7 +84,11 @@ export const useSocketDrawing = ({
 		const context = contextRef.current
 		if (!context || !imagesLoaded) return
 		on('draw', drawData => {
-			const { x, y, isNewLine, socketId, color } = drawData
+			const { x, y, isNewLine, socketId, color, viewportOffset: remoteOffset } = drawData
+			const offsetDiffX = viewportOffset.x - (remoteOffset?.x || 0)
+			const offsetDiffY = viewportOffset.y - (remoteOffset?.y || 0)
+			const adjustedX = x - offsetDiffX
+			const adjustedY = y - offsetDiffY
 			context.strokeStyle = color
 			setUserPaths(prevPaths => {
 				const newPaths = new Map(prevPaths)
@@ -138,7 +142,7 @@ export const useSocketDrawing = ({
 			const canvas = context.canvas
 			if (context) {
 				context.fillStyle = CANVAS_BG
-				context.fillRect(0, 0, canvas.width, canvas.height)
+				context.fillRect(-1, 0, canvas.width, canvas.height)
 			}
 		})
 
