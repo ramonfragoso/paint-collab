@@ -12,6 +12,7 @@ export default function CanvasDrawing() {
 	const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
 	const [canvasSize, setCanvasSize] = useState({ width: 3000, height: 3000 })
 	const [viewportOffset, setViewportOffset] = useState({ x: 0, y: 0 })
+	const [mode, setMode] = useState('line')
 
 	const { emit, on, off, socketId } = useSocket()
 	const [userPaths, setUserPaths] = useState(new Map())
@@ -20,6 +21,7 @@ export default function CanvasDrawing() {
 		canvasRef,
 		mouseCanvasRef,
 		isDrawingRef,
+		isDrawingLineRef,
 		contextRef,
 		initializeCanvas,
 		changeLineWidth,
@@ -36,6 +38,7 @@ export default function CanvasDrawing() {
 		off,
 		socketId,
 		mouseCanvasRef,
+		viewportOffset,
 	})
 
 	useEffect(() => {
@@ -47,9 +50,17 @@ export default function CanvasDrawing() {
 	}, [localColor, changeLineWidth])
 
 	const startDrawing = e => {
-		if (e.button === 1 || (e.button === 0 && e.altKey)) {
+		let clientX, clientY
+		if (e.touches) {
+			clientX = e.touches[0].clientX
+			clientY = e.touches[0].clientY
+		} else {
+			clientX = e.clientX
+			clientY = e.clientY
+		}
+		if (e.button === 1 || (e.button === 0 && e.altKey) || mode === "drag") {
 			setIsDragging(true)
-			setDragStart({ x: e.clientX, y: e.clientY })
+			setDragStart({ x: clientX, y: clientY })
 			e.preventDefault()
 		} else {
 			const canvas = canvasRef.current
@@ -58,39 +69,53 @@ export default function CanvasDrawing() {
 			if (!canvas || !context) return
 
 			const rect = canvas.getBoundingClientRect()
-			const x = e.clientX - rect.left - viewportOffset.x
-			const y = e.clientY - rect.top - viewportOffset.y
+			const x = clientX - rect.left
+			const y = clientY - rect.top
+			if (mode === 'line') {
+				context.strokeStyle = localColor
+				context.beginPath()
+				context.moveTo(x, y)
+				console.log('hreeeee')
+				isDrawingLineRef.current = true
+				return
+			}
 
 			context.strokeStyle = localColor
 			context.beginPath()
 			context.moveTo(x, y)
 
-			const originalX = e.clientX - rect.left
-			const originalY = e.clientY - rect.top
-
 			emit('draw', {
-				x: originalX,
-				y: originalY,
+				x,
+				y,
 				isNewLine: true,
 				userId: socketId,
 				color: localColor,
+				viewportOffset,
 			})
 			isDrawingRef.current = true
 		}
 	}
 
-	const trackMouseMove = e => {
+	const trackMouseMove = (clientX, clientY) => {
 		const canvas = mouseCanvasRef.current
 		const rect = canvas.getBoundingClientRect()
-		const x = e.clientX - rect.left
-		const y = e.clientY - rect.top
-		emit('mouse-move', { x, y, socketId })
+		const x = clientX - rect.left
+		const y = clientY - rect.top
+		emit('mouse-move', { x, y, socketId, viewportOffset })
 	}
 
 	const draw = e => {
+		let clientX, clientY
+		if (e.touches) {
+			clientX = e.touches[0].clientX
+			clientY = e.touches[0].clientY
+		} else {
+			clientX = e.clientX
+			clientY = e.clientY
+		}
 		if (isDragging) {
-			const dx = e.clientX - dragStart.x
-			const dy = e.clientY - dragStart.y
+			const dx = clientX - dragStart.x
+			const dy = clientY - dragStart.y
 
 			setViewportOffset(prev => {
 				const newX = prev.x + dx
@@ -98,10 +123,10 @@ export default function CanvasDrawing() {
 				return { x: newX, y: newY }
 			})
 
-			setDragStart({ x: e.clientX, y: e.clientY })
+			setDragStart({ x: clientX, y: clientY })
 			return
 		}
-		trackMouseMove(e)
+		trackMouseMove(clientX, clientY)
 		if (!isDrawingRef.current) return
 
 		const canvas = canvasRef.current
@@ -109,26 +134,44 @@ export default function CanvasDrawing() {
 		if (!canvas || !context) return
 
 		const rect = canvas.getBoundingClientRect()
-		const x = e.clientX - rect.left - viewportOffset.x
-		const y = e.clientY - rect.top - viewportOffset.y
+		const x = clientX - rect.left
+		const y = clientY - rect.top
 
 		context.lineTo(x, y)
 		context.stroke()
 
-		const originalX = e.clientX - rect.left
-		const originalY = e.clientY - rect.top
-
 		emit('draw', {
-			x: originalX,
-			y: originalY,
+			x,
+			y,
 			isNewLine: false,
 			userId: socketId,
 			color: localColor,
-			viewportOffset: viewportOffset,
+			viewportOffset,
 		})
 	}
 
-	const stopDrawing = () => {
+	const stopDrawing = e => {
+		e.preventDefault()
+		if (mode === 'line' && !isDragging) {
+			let clientX, clientY
+			if (e.touches) {
+				clientX = e.touches[0].clientX
+				clientY = e.touches[0].clientY
+			} else {
+				clientX = e.clientX
+				clientY = e.clientY
+			}
+			if (!isDrawingLineRef.current) return
+			const canvas = canvasRef.current
+			const rect = canvas.getBoundingClientRect()
+			const context = contextRef.current
+			const x = clientX - rect.left
+			const y = clientY - rect.top
+			context.lineTo(x, y)
+			context.stroke()
+			isDrawingLineRef.current = false
+			return
+		}
 		setIsDragging(false)
 		isDrawingRef.current = false
 	}
@@ -154,6 +197,8 @@ export default function CanvasDrawing() {
 					localColor={localColor}
 					setLocalColor={setLocalColor}
 					onClear={clearCanvas}
+					mode={mode}
+					setMode={setMode}
 				/>
 			</div>
 			<canvas
@@ -172,6 +217,9 @@ export default function CanvasDrawing() {
 				onMouseUp={stopDrawing}
 				onMouseOut={stopDrawing}
 				onMouseLeave={handleMouseLeave}
+				onTouchStart={startDrawing}
+				onTouchMove={draw}
+				onTouchEnd={stopDrawing}
 				ref={mouseCanvasRef}
 				style={{
 					width: '100%',

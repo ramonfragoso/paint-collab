@@ -5,6 +5,7 @@ export const useCanvas = initialColor => {
 	const canvasRef = useRef(null)
 	const mouseCanvasRef = useRef(null)
 	const isDrawingRef = useRef(false)
+	const isDrawingLineRef = useRef(false)
 	const mouseCanvasContextRef = useRef(null)
 	const contextRef = useRef(null)
 
@@ -17,9 +18,9 @@ export const useCanvas = initialColor => {
 		canvas.width = canvas.offsetWidth
 		mouseCanvas.height = mouseCanvas.offsetHeight
 		canvas.height = canvas.offsetHeight
-		
+
 		const context = canvas.getContext('2d')
-    const mouseContext = mouseCanvas.getContext("2d");
+		const mouseContext = mouseCanvas.getContext('2d')
 
 		if (!context) return
 		context.fillStyle = CANVAS_BG
@@ -27,10 +28,19 @@ export const useCanvas = initialColor => {
 		context.lineWidth = 2
 		context.lineCap = 'round'
 
+		// context.fillStyle = 'white'
+		// context.fillRect(200, 200, 100, 100)
+		
+		// // context.save()
+		// context.translate(50,50)
+		// // context.restore()
+		// context.fillStyle = 'green'
+		// context.fillRect(200, 200, 100, 100)
+
 		contextRef.current = context
 
-    if (!mouseContext) return;
-    mouseCanvasContextRef.current = mouseContext;
+		if (!mouseContext) return
+		mouseCanvasContextRef.current = mouseContext
 	}, [])
 
 	const changeLineWidth = useCallback(color => {
@@ -44,6 +54,7 @@ export const useCanvas = initialColor => {
 		canvasRef,
 		mouseCanvasRef,
 		isDrawingRef,
+		isDrawingLineRef,
 		contextRef,
 		mouseCanvasContextRef,
 		initializeCanvas,

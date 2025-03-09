@@ -15,16 +15,47 @@ export const useSocketDrawing = ({
 	on,
 	off,
 	socketId,
+	viewportOffset,
 }) => {
 	const userCursorsRef = useRef(new Map())
 	const [cursorImages, setCursorImages] = useState([])
 	const [imagesLoaded, setImagesLoaded] = useState(false)
+	const [drawingHistory, setDrawingHistory] = useState([])
 
 	const cursors = ['red', 'blue', 'yellow', 'green', 'orange']
 
 	useEffect(() => {
+		const context = contextRef.current
+		if (context) {
+			context.save()
+			context.fillStyle = 'black'
+			context.fillRect(0, 0, context.canvas.width, context.canvas.height)
+			context.translate(viewportOffset.x, viewportOffset.y)
+			drawingHistory.forEach(drawData => {
+				const { x, y, socketId, isNewLine, color } = drawData
+				context.fillStyle = color
+				if (isNewLine) {
+					context.beginPath()
+					context.moveTo(x, y)
+					userPaths.set(socketId, { x, y })
+				} else {
+					const lastPos = userPaths.get(socketId)
+					if (lastPos) {
+						context.beginPath()
+						context.moveTo(lastPos.x, lastPos.y)
+						context.lineTo(x, y)
+						context.stroke()
+						userPaths.set(socketId, { x, y })
+					}
+				}
+			})
+			context.restore()
+		}
+	}, [viewportOffset, drawingHistory])
+
+	useEffect(() => {
 		const loadedImages = []
-		let loadedCount = -1
+		let loadedCount = 0
 
 		cursors.forEach((cursor, index) => {
 			const image = new Image()
@@ -84,11 +115,7 @@ export const useSocketDrawing = ({
 		const context = contextRef.current
 		if (!context || !imagesLoaded) return
 		on('draw', drawData => {
-			const { x, y, isNewLine, socketId, color, viewportOffset: remoteOffset } = drawData
-			const offsetDiffX = viewportOffset.x - (remoteOffset?.x || 0)
-			const offsetDiffY = viewportOffset.y - (remoteOffset?.y || 0)
-			const adjustedX = x - offsetDiffX
-			const adjustedY = y - offsetDiffY
+			const { x, y, isNewLine, socketId, color } = drawData
 			context.strokeStyle = color
 			setUserPaths(prevPaths => {
 				const newPaths = new Map(prevPaths)
@@ -111,6 +138,7 @@ export const useSocketDrawing = ({
 		})
 
 		on('drawing-history', history => {
+			setDrawingHistory(history)
 			history.forEach(drawData => {
 				const { x, y, socketId, isNewLine, color } = drawData
 				context.strokeStyle = color
@@ -152,12 +180,12 @@ export const useSocketDrawing = ({
 			drawCursors()
 		})
 
-		return () => {
-			off('draw')
-			off('mouse-move')
-			off('drawing-history')
-			off('clear-canvas')
-			off('mouse-leave')
-		}
+		// return () => {
+		// 	off('draw')
+		// 	off('mouse-move')
+		// 	off('drawing-history')
+		// 	off('clear-canvas')
+		// 	off('mouse-leave')
+		// }
 	}, [on, off, contextRef?.current, cursorImages, imagesLoaded])
 }
