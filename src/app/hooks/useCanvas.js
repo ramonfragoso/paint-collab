@@ -1,13 +1,16 @@
 import { CANVAS_BG } from '@/utils/colors'
 import { useCallback, useRef } from 'react'
+import { useDrawingContext } from '../context/DrawingContext'
 
-export const useCanvas = initialColor => {
-	const canvasRef = useRef(null)
-	const mouseCanvasRef = useRef(null)
-	const isDrawingRef = useRef(false)
-	const isDrawingLineRef = useRef(false)
-	const mouseCanvasContextRef = useRef(null)
-	const contextRef = useRef(null)
+export const useCanvas = () => {
+	const {
+		canvasRef,
+		mouseCanvasRef,
+		contextRef,
+		mouseCanvasContextRef,
+		isDrawingLineRef,
+		isDrawingRef,
+	} = useDrawingContext()
 
 	const initializeCanvas = useCallback(() => {
 		const canvas = canvasRef.current
@@ -27,15 +30,6 @@ export const useCanvas = initialColor => {
 		context.fillRect(0, 0, canvas.width, canvas.height)
 		context.lineWidth = 2
 		context.lineCap = 'round'
-
-		// context.fillStyle = 'white'
-		// context.fillRect(200, 200, 100, 100)
-		
-		// // context.save()
-		// context.translate(50,50)
-		// // context.restore()
-		// context.fillStyle = 'green'
-		// context.fillRect(200, 200, 100, 100)
 
 		contextRef.current = context
 
