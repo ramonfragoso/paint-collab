@@ -30,8 +30,8 @@ export const useSocketDrawing = () => {
 	const applyDrawing = drawData => {
 		const context = contextRef.current
 		const { x, y, socketId, isNewLine, color } = drawData
-		const absX = x + viewportOffset.x
-		const absY = y + viewportOffset.y
+		const absX = x 
+		const absY = y 
 
 		context.strokeStyle = color
 

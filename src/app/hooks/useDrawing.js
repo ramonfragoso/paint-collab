@@ -69,8 +69,8 @@ export function useDrawing() {
 			}
 
 			const drawingObject = {
-				x: x - viewportOffset.x,
-				y: y - viewportOffset.y,
+				x,
+				y,
 				isNewLine: true,
 				userId: socketId,
 				color: localColor,
@@ -123,8 +123,8 @@ export function useDrawing() {
 			context.stroke()
 
 			const drawingObject = {
-				x: x - viewportOffset.x,
-				y: y - viewportOffset.y,
+				x,
+				y,
 				isNewLine: false,
 				userId: socketId,
 				color: localColor,
