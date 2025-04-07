@@ -1,7 +1,6 @@
 import { CANVAS_BG } from '@/utils/colors'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSocket } from './useSocket'
-import { useCanvas } from './useCanvas'
 import { useDrawingContext } from '../context/DrawingContext'
 
 const CURSOR_OFFSET_X = -19
