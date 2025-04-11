@@ -23,31 +23,34 @@ export const useSocketDrawing = () => {
 
 	const [cursorImages, setCursorImages] = useState([])
 	const [imagesLoaded, setImagesLoaded] = useState(false)
+	const [currentUserPath, setCurrentUserPath] = useState({
+		points: [],
+	})
 
 	const cursors = ['red', 'blue', 'yellow', 'green', 'orange']
 
 	const applyDrawing = drawData => {
 		const context = contextRef.current
-		const { x, y, socketId, isNewLine, color } = drawData
-		const absX = x 
-		const absY = y 
-
-		context.strokeStyle = color
-
-		if (isNewLine) {
-			context.beginPath()
-			context.moveTo(absX, absY)
-			userPaths.set(socketId, { x: absX, y: absY })
-		} else {
-			const lastPos = userPaths.get(socketId)
-			if (lastPos) {
+		const { points, socketId, isNewLine, color } = drawData
+		points?.forEach((point, index) => {
+			const absX = point.x
+			const absY = point.y
+			context.strokeStyle = color
+			if (index === 0) {
 				context.beginPath()
-				context.moveTo(lastPos.x, lastPos.y)
-				context.lineTo(absX, absY)
-				context.stroke()
+				context.moveTo(absX, absY)
 				userPaths.set(socketId, { x: absX, y: absY })
+			} else {
+				const lastPos = userPaths.get(socketId)
+				if (lastPos) {
+					context.beginPath()
+					context.moveTo(lastPos.x, lastPos.y)
+					context.lineTo(absX, absY)
+					context.stroke()
+					userPaths.set(socketId, { x: absX, y: absY })
+				}
 			}
-		}
+		})
 	}
 
 	useEffect(() => {
@@ -125,15 +128,23 @@ export const useSocketDrawing = () => {
 		if (!context || !imagesLoaded) return
 
 		on('draw', drawData => {
-			setUserPaths(prevPaths => {
-				const newPaths = new Map(prevPaths)
-				applyDrawing(drawData)
-				return newPaths
-			})
+			if (drawData.isLastPoint) {
+				setDrawingHistory(prev => [...prev, currentUserPath])
+				setCurrentUserPath({
+					points: []
+				})
+			} else {
+				setCurrentUserPath(prev => ({
+					isNewLine: drawData.isNewLine,
+					userId: drawData.userId,
+					color: drawData.color,
+					points: [...prev.points, { x: drawData.x, y: drawData.y }],
+				}))
+				applyDrawing(currentUserPath)
+			}
 		})
 
 		on('drawing-history', history => {
-			console.log('drwaing history')
 			setDrawingHistory(history)
 			history.forEach(drawData => applyDrawing(drawData))
 		})
@@ -166,5 +177,12 @@ export const useSocketDrawing = () => {
 			off('clear-canvas')
 			off('mouse-leave')
 		}
-	}, [on, off, contextRef?.current, cursorImages, imagesLoaded])
+	}, [
+		on,
+		off,
+		contextRef?.current,
+		cursorImages,
+		imagesLoaded,
+		currentUserPath,
+	])
 }

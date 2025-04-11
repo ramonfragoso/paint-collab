@@ -15,6 +15,7 @@ export function useDrawing() {
 		setMode,
 		viewportOffset,
 		setViewportOffset,
+		drawingHistory,
 		setDrawingHistory,
 	} = useDrawingContext()
 
@@ -22,6 +23,9 @@ export function useDrawing() {
 
 	const [isDragging, setIsDragging] = useState(false)
 	const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+	const [currentUserPath, setCurrentUserPath] = useState({
+		points: [],
+	})
 
 	const getClientCoordinates = e => {
 		if (e.touches) {
@@ -75,7 +79,12 @@ export function useDrawing() {
 				userId: socketId,
 				color: localColor,
 			}
-			setDrawingHistory(prev => [...prev, drawingObject])
+			setCurrentUserPath({
+				points: [{ x, y }],
+				isNewLine: true,
+				userId: socketId,
+				color: localColor,
+			})
 			emit('draw', drawingObject)
 			isDrawingRef.current = true
 		},
@@ -88,6 +97,7 @@ export function useDrawing() {
 			mode,
 			isDrawingLineRef,
 			isDrawingRef,
+			setCurrentUserPath,
 		]
 	)
 
@@ -129,7 +139,11 @@ export function useDrawing() {
 				userId: socketId,
 				color: localColor,
 			}
-			setDrawingHistory(prev => [...prev, drawingObject])
+			setCurrentUserPath(prev => ({
+				...prev,
+				isNewLine: false,
+				points: [...prev.points, { x, y }],
+			}))
 			emit('draw', drawingObject)
 		},
 		[
@@ -142,6 +156,50 @@ export function useDrawing() {
 			socketId,
 			localColor,
 			viewportOffset,
+			setCurrentUserPath,
+		]
+	)
+
+	const stopDrawing = useCallback(
+		e => {
+			e.preventDefault()
+			const { clientX, clientY } = getClientCoordinates(e)
+			const { x, y } = getCanvasCoordinates(clientX, clientY)
+			setDrawingHistory(prev => [...prev, { ...currentUserPath }])
+			const drawingObject = {
+				x,
+				y,
+				isNewLine: false,
+				userId: socketId,
+				color: localColor,
+			}
+			emit('draw', {
+				isLastPoint: true,
+				...drawingObject,
+			})
+			setCurrentUserPath({
+				points: [],
+			})
+			if (mode === 'line' && !isDragging) {
+				if (!isDrawingLineRef.current) return
+
+				const context = contextRef.current
+				context.lineTo(x, y)
+				context.stroke()
+				isDrawingLineRef.current = false
+				return
+			}
+
+			setIsDragging(false)
+			isDrawingRef.current = false
+		},
+		[
+			contextRef,
+			mode,
+			isDragging,
+			isDrawingLineRef,
+			isDrawingRef,
+			currentUserPath,
 		]
 	)
 
@@ -156,15 +214,11 @@ export function useDrawing() {
 		[mouseCanvasRef, emit, socketId, viewportOffset]
 	)
 
-	const stopDrawing = useCallback(
+	const releaseMouse = useCallback(
 		e => {
 			e.preventDefault()
-
 			if (mode === 'line' && !isDragging) {
 				if (!isDrawingLineRef.current) return
-
-				const { clientX, clientY } = getClientCoordinates(e)
-				const { x, y } = getCanvasCoordinates(clientX, clientY)
 
 				const context = contextRef.current
 				context.lineTo(x, y)
@@ -176,7 +230,14 @@ export function useDrawing() {
 			setIsDragging(false)
 			isDrawingRef.current = false
 		},
-		[contextRef, mode, isDragging, isDrawingLineRef, isDrawingRef]
+		[
+			contextRef,
+			mode,
+			isDragging,
+			isDrawingLineRef,
+			isDrawingRef,
+			currentUserPath,
+		]
 	)
 
 	const clearCanvas = useCallback(() => {
@@ -197,6 +258,7 @@ export function useDrawing() {
 		startDrawing,
 		draw,
 		stopDrawing,
+		releaseMouse,
 		clearCanvas,
 		handleMouseLeave,
 		setMode,

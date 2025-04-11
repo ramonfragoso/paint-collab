@@ -17,6 +17,7 @@ function CanvasDrawingInner() {
 		startDrawing,
 		draw,
 		stopDrawing,
+		releaseMouse,
 		clearCanvas,
 		handleMouseLeave,
 		setMode,
@@ -57,7 +58,7 @@ function CanvasDrawingInner() {
 				onMouseDown={startDrawing}
 				onMouseMove={draw}
 				onMouseUp={stopDrawing}
-				onMouseOut={stopDrawing}
+				onMouseOut={releaseMouse}
 				onMouseLeave={handleMouseLeave}
 				onTouchStart={startDrawing}
 				onTouchMove={draw}
