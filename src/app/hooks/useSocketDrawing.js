@@ -1,5 +1,5 @@
 import { CANVAS_BG } from '@/utils/colors'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { useSocket } from './useSocket'
 import { useDrawingContext } from '../context/DrawingContext'
 
@@ -53,7 +53,7 @@ export const useSocketDrawing = () => {
 		})
 	}
 
-	useEffect(() => {
+	const drawHistory = useCallback(() => {
 		const context = contextRef.current
 		if (context) {
 			context.save()
@@ -64,6 +64,10 @@ export const useSocketDrawing = () => {
 			context.restore()
 		}
 	}, [viewportOffset, drawingHistory, contextRef?.current])
+
+	useEffect(() => {
+		drawHistory()
+	}, [viewportOffset, drawingHistory, contextRef?.current, drawHistory])
 
 	useEffect(() => {
 		const loadedImages = []
@@ -123,7 +127,7 @@ export const useSocketDrawing = () => {
 		})
 	}
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		const context = contextRef.current
 		if (!context || !imagesLoaded) return
 
@@ -131,7 +135,7 @@ export const useSocketDrawing = () => {
 			if (drawData.isLastPoint) {
 				setDrawingHistory(prev => [...prev, currentUserPath])
 				setCurrentUserPath({
-					points: []
+					points: [],
 				})
 			} else {
 				setCurrentUserPath(prev => ({
@@ -139,6 +143,7 @@ export const useSocketDrawing = () => {
 					userId: drawData.userId,
 					color: drawData.color,
 					points: [...prev.points, { x: drawData.x, y: drawData.y }],
+					mode: drawData.mode,
 				}))
 				applyDrawing(currentUserPath)
 			}
@@ -185,4 +190,9 @@ export const useSocketDrawing = () => {
 		imagesLoaded,
 		currentUserPath,
 	])
+
+	return {
+		applyDrawing,
+		drawHistory
+	}
 }

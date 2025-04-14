@@ -1,5 +1,5 @@
 // src/hooks/useSocket.js
-import { useEffect, useCallback, useRef, useState, useMemo } from 'react'
+import { useEffect, useCallback, useRef, useState, useMemo, useLayoutEffect } from 'react'
 import { io } from 'socket.io-client'
 
 let socketInstance = null
@@ -8,7 +8,7 @@ export const useSocket = (url = 'http://192.168.0.14:3000/') => {
 	const [isConnected, setIsConnected] = useState(false)
 	const socketRef = useRef(null)
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		if (!socketInstance) {
 			socketInstance = io(url, {
 				transports: ['websocket', 'webtransport'],
@@ -16,7 +16,7 @@ export const useSocket = (url = 'http://192.168.0.14:3000/') => {
 		}
 		socketRef.current = socketInstance
 
-		socketRef.current.on('connect', () => {
+		socketRef.current.on('connect', (connectData) => {
 			setIsConnected(true)
 		})
 
