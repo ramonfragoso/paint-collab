@@ -4,7 +4,7 @@ import { io } from 'socket.io-client'
 
 let socketInstance = null
 
-export const useSocket = (url = 'http://192.168.0.14:3000/') => {
+export const useSocket = (url = 'http://34.235.155.158') => {
 	const [isConnected, setIsConnected] = useState(false)
 	const socketRef = useRef(null)
 

@@ -2,19 +2,20 @@
 import Image from 'next/image'
 
 export default function Home() {
+	window.location.href = '/paint'
 	const createNewRoom = async () => {
-		try {
-			const response = await fetch('/api/create-new-room', {
-				method: 'POST',
-			})
-			if (!response.ok) {
-				throw new Error('Failed to create room')
-			}
-			const { roomId } = await response.json()
-			window.location.href = `/${roomId}`
-		} catch (error) {
-			console.error('Error creating room:', error)
-		}
+		// try {
+		// 	const response = await fetch('/api/create-new-room', {
+		// 		method: 'POST',
+		// 	})
+		// 	if (!response.ok) {
+		// 		throw new Error('Failed to create room')
+		// 	}
+		// 	const { roomId } = await response.json()
+		// 	window.location.href = `/${roomId}`
+		// } catch (error) {
+		// 	console.error('Error creating room:', error)
+		// }
 	}
 
 	return (
@@ -36,9 +37,9 @@ export default function Home() {
 							Create New Room
 						</button>
 
-						<button className='p-5 border border-slate-400 text-3xl -rotate-1'>
+						{/* <button className='p-5 border border-slate-400 text-3xl -rotate-1'>
 							Join Room
-						</button>
+						</button> */}
 					</div>
 				</div>
 			</main>
