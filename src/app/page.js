@@ -1,9 +1,10 @@
 'use client'
 import Image from 'next/image'
+import { redirect } from 'next/navigation'
 
 export default function Home() {
-	window.location.href = '/paint'
 	const createNewRoom = async () => {
+		redirect("/paint")
 		// try {
 		// 	const response = await fetch('/api/create-new-room', {
 		// 		method: 'POST',
